@@ -1,4 +1,4 @@
-name: CI-CD Project
+name: CI-CD
 
 on:
   push:
@@ -7,12 +7,13 @@ on:
     branches: [ "main", "develop" ]
 
 jobs:
-  # --- PARTIE 1 : CI (INTEGRATION CONTINUE) ---
   laravel-tests:
     name: "Qualité & Tests"
     runs-on: ubuntu-latest
-    env: # AJOUTE CECI
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    defaults:
+      run:
+        working-directory: Backend
 
     services:
       mysql:
@@ -22,7 +23,11 @@ jobs:
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
       - name: Récupération du code
@@ -31,13 +36,12 @@ jobs:
       - name: Installation de PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.0'
+          php-version: '8.4'
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql
 
       - name: Installation des dépendances (Composer)
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+        run: composer install --no-interaction --prefer-dist
 
-      # ÉTAPE CLEAN CODE : Vérifie si le code est bien formaté
       - name: Vérification du Clean Code (Pint)
         run: ./vendor/bin/pint --test
 
@@ -47,8 +51,7 @@ jobs:
           php artisan key:generate
           chmod -R 777 storage bootstrap/cache
 
-      # ÉTAPE TESTS : Lance les tests unitaires et fonctionnels
-      - name: Exécution des Tests (MySQL)
+      - name: Exécution des Tests
         env:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
@@ -58,25 +61,15 @@ jobs:
           DB_PASSWORD: ''
         run: php artisan test
 
-      # ÉTAPE ARTEFACT : Sauvegarde le projet pour le job suivant
-      - name: Archivage de l'artefact
-        uses: actions/upload-artifact@v4
-        with:
-          name: exchapay-build
-          path: .
-
-  # --- PARTIE 2 : CD (DEPLOIEMENT CONTINU) ---
   build-and-push-docker:
     name: "Build & Push Docker"
-    needs: laravel-tests # Ne se lance que si les tests réussissent
+    needs: laravel-tests
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
 
     steps:
-      - name: Récupération de l'artefact
-        uses: actions/download-artifact@v4
-        with:
-          name: exchapay-build
+      - name: Récupération du code
+        uses: actions/checkout@v4
 
       - name: Connexion à Docker Hub
         uses: docker/login-action@v3
@@ -87,9 +80,8 @@ jobs:
       - name: Construction et envoi de l'image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./Backend
           push: true
-          # On crée deux tags : 'latest' pour la dernière version et un tag avec le numéro du commit
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/exchapay-backend:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/exchapay-backend:${{ github.sha }}
