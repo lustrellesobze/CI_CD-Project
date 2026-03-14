@@ -3,6 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Filiere;
+use App\Models\Niveau;
+use App\Models\Salle;
+use App\Models\Ec;
+use App\Models\Programmation;
+use App\Models\Personnel;
+use App\Models\Ue;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,11 +22,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Filiere::factory(200)->create();
+        // Niveau::factory(500)->create();
+        // Ue::factory(1000)->create();
+        // Ec::factory(1000)->create();
+        // Salle::factory(1000)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Personnel::factory(200)->create();
+         Programmation::factory(500)->create();
     }
 }
