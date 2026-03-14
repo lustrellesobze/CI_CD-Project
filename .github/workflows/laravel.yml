@@ -1,4 +1,4 @@
-name: CI-CD 
+name: CI-CD
 
 on:
   push:
@@ -11,8 +11,6 @@ jobs:
   laravel-tests:
     name: "Qualité & Tests"
     runs-on: ubuntu-latest
-    env: # AJOUTE CECI
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     services:
       mysql:
@@ -37,7 +35,6 @@ jobs:
       - name: Installation des dépendances (Composer)
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
-      # ÉTAPE CLEAN CODE : Vérifie si le code est bien formaté
       - name: Vérification du Clean Code (Pint)
         run: ./vendor/bin/pint --test
 
@@ -47,7 +44,6 @@ jobs:
           php artisan key:generate
           chmod -R 777 storage bootstrap/cache
 
-      # ÉTAPE TESTS : Lance les tests unitaires et fonctionnels
       - name: Exécution des Tests (MySQL)
         env:
           DB_CONNECTION: mysql
@@ -58,7 +54,6 @@ jobs:
           DB_PASSWORD: ''
         run: php artisan test
 
-      # ÉTAPE ARTEFACT : Sauvegarde le projet pour le job suivant
       - name: Archivage de l'artefact
         uses: actions/upload-artifact@v4
         with:
@@ -68,7 +63,7 @@ jobs:
   # --- PARTIE 2 : CD (DEPLOIEMENT CONTINU) ---
   build-and-push-docker:
     name: "Build & Push Docker"
-    needs: laravel-tests # Ne se lance que si les tests réussissent
+    needs: laravel-tests
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
 
@@ -89,7 +84,6 @@ jobs:
         with:
           context: .
           push: true
-          # On crée deux tags : 'latest' pour la dernière version et un tag avec le numéro du commit
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/exchapay-backend:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/exchapay-backend:${{ github.sha }}
